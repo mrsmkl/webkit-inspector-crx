@@ -371,6 +371,28 @@ WebInspector.loaded = function()
         });
         return;
     }
+    if ("connector" in WebInspector.queryParamsObject) {
+        var host = WebInspector.queryParamsObject.host;
+        var page = WebInspector.queryParamsObject.page;
+        var s = io.connect(host);
+        s.on("connect", function () {
+            console.log("Connected");
+            s.emit("register_debugger", {page:page}, function () {
+                console.log("Registered");
+                InspectorFrontendHost.sendMessageToBackend = function (msg) {
+                    console.log("Sending message:" + msg);
+                    s.emit("message", msg);
+                };
+                WebInspector.doLoadedDone();
+            });
+        });
+        s.on("error", function(error) { console.error(error); });
+        s.on("message", function (msg) {
+            console.log("Received message: " + msg);
+            InspectorBackend.dispatch(msg);
+        });
+        return;
+    }
     if ("page" in WebInspector.queryParamsObject) {
         var page = WebInspector.queryParamsObject.page;
         var host = "host" in WebInspector.queryParamsObject ? WebInspector.queryParamsObject.host : window.location.host;
